@@ -6,13 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interactive Board Game</title>
     <link rel="stylesheet" href="css/main.css">
+
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@<version>/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@<version>/examples/jsm/"
+          }
+        }
+    </script>
 </head>
 <body>
-    <div id="boardContainer"></div>
-
-    <!--<script src="js/three/OrbitControls.js"></script>-->
-    <script type="module" src="./js/Game.js"></script>
-    <script type="module" src="./js/BoardController.js"></script>
     <script type="module" src="./js/main.js"></script>
 
 </body>
