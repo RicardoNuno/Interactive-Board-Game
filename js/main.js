@@ -1,98 +1,91 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
+import {createBoard, createFloor} from './board.js';
+import * as DICE from './dice.js';
+import {createButton1, createButton2} from './redButton.js';
+import * as THIMBLE from './thimble.js';
 
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
 
-const renderer = new THREE.WebGLRenderer();
+let renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
-renderer.setPixelRatio(5);
+renderer.setPixelRatio(3);
 
-var planeGeometry = new THREE.BoxGeometry(25, 25, 0.2); // Example dimensions
+// ----------------------------------------------- INIT SCENE --------------------------------------------------
+let diceMesh;
+let diceDic = {};
+let floor;
+let redButton;
+let thimbleObj;
+let diceObject;
+let currentScore;
 
-var textureLoader = new THREE.TextureLoader();
-var monopolyTexture = textureLoader.load('/monopoly.png');
-// Adjust the mipmap bias for texture filtering
-monopolyTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-monopolyTexture.generateMipmaps = false; // Disable automatic mipmap generation
-monopolyTexture.magFilter = THREE.LinearFilter; // Use linear filtering for magnification
-monopolyTexture.minFilter = THREE.LinearMipmapLinearFilter; // Use linear filtering for minification
-
-
-const planeMaterials = [
-    new THREE.MeshBasicMaterial({ color: 0x000000 }), // Right side (black)
-    new THREE.MeshBasicMaterial({ color: 0x000000 }), // Left side (black)
-    new THREE.MeshBasicMaterial({ color: 0x000000 }), // Top side (black)
-    new THREE.MeshBasicMaterial({ color: 0x000000 }), // Bottom side (black)
-    new THREE.MeshBasicMaterial({ map: monopolyTexture }), // Front side (with texture)
-    new THREE.MeshBasicMaterial({ color: 0xFFFF0F }) // Back side (Yellow)
-];
-
-// Create a material with different sides
-var plane = new THREE.Mesh(planeGeometry, planeMaterials);
-scene.add(plane);
-
-const loader = new GLTFLoader();
-var thimble;
-var isMoving = false;
-var targetX = 11;
-var targetY = -9;
-var originalZ = 0.1;
-let jumpStartTime = 0;
-const jumpDuration = 500; // Adjust the duration of the jump as needed (in milliseconds)
-loader.load('thimble.gltf', function (gltf) {
-    thimble = gltf;
-    gltf.scene.scale.set(0.05, 0.05, 0.05);
-    gltf.scene.position.set(targetX, targetY, originalZ);
-    gltf.scene.rotation.set(Math.PI / 2, 0, 0);
-    
-    // Adjust material properties
-    gltf.scene.traverse(function (child) {
-        if (child.isMesh) {
-            // Example: Set metallicness and roughness
-            child.material.metalness = 0.7; // Adjust metallicness (0 to 1)
-            child.material.roughness = 0.2; // Adjust roughness (0 to 1)
-            child.material.envMapIntensity = 1; // Adjust environment map intensity
-            
-            // Example: Set color to gray to achieve metallic appearance
-            child.material.color.set(0xFFFFF0); // Gray color
-        }
-    });
-    
-    // Add lights to the scene (ambient light and directional light)
+function initScene() {
+    renderer.shadowMap.enabled = true;
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(1, 1, 1);
+    const topLight = new THREE.PointLight(0xffffff, .5);
+    topLight.position.set(10, 15, 0);
+    topLight.castShadow = true;
+    topLight.shadow.mapSize.width = 2048;
+    topLight.shadow.mapSize.height = 2048;
+    topLight.shadow.camera.near = 2;
+    topLight.shadow.camera.far = 400;
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Example directional light
+    directionalLight.position.set(15, 30, 15);
     scene.add(directionalLight);
+    scene.add(topLight);
+    addObjects();
+    animate();
+}
 
-    scene.add(gltf.scene);
-});
+function addObjects(){
+    scene.add(createBoard());
+    floor = createFloor();
+    scene.add(floor);
+    floorPhysics(floor);
 
+    const button1 = createButton1();
+    scene.add(button1.torus);
+    physicsWorld.addBody(button1.body);
 
+    const button2 = createButton2();
+    redButton = scene.add(button2.sphere);
+    physicsWorld.addBody(button2.body);
+    
+    THIMBLE.createThimble(function (thimble) {
+        thimbleObj = thimble;
+        scene.add(thimble);
+    });
+    diceInit();
+}
 
+function floorPhysics(floor){
+    const floorBody = new CANNON.Body({
+        type: CANNON.Body.STATIC,
+        shape: new CANNON.Plane(),
+    });
+    floorBody.position.copy(floor.position);
+    floorBody.quaternion.copy(floor.quaternion);
+    physicsWorld.addBody(floorBody);
+}
 
-var axesHelper = new THREE.AxesHelper(50); // The parameter is the length of the axes
-scene.add(axesHelper);
+function diceInit(){
+    diceMesh = DICE.createDiceMesh(5);
+    diceDic = DICE.createDice(5, diceMesh);
+    physicsWorld.addBody(diceDic.body);
+    diceObject = diceDic;
+    scene.add(diceMesh);
+    DICE.addDiceEvents(diceObject);
+}
 
-camera.position.set(0, 19, 0); // Adjust Y value to position above the plane
-camera.lookAt(plane.position);
-
-var ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Example ambient light
-scene.add(ambientLight);
-
-var directionalLight = new THREE.DirectionalLight(0xffffff, 0.5); // Example directional light
-directionalLight.position.set(1, 1, 1);
-scene.add(directionalLight);
-
-// user interaction
-
+// ----------------------------------------------- USER INTERACTION --------------------------------------------------
 let drag = false;
-let phi = 0, theta = 0;
+let phi = 90, theta = 0;
 let old_x, old_y;
-let radius = 16.5;
+let radius = 16;
 
 const mouseDown = function (e) {
     drag = true;
@@ -111,10 +104,12 @@ const mouseMove = function (e) {
         dY = e.pageY - old_y;
     theta += dX * 1.5 * Math.PI / window.innerWidth;
     phi += dY * 1.5 * Math.PI / window.innerHeight;
+    phi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, phi)); // Clamp phi to avoid flipping
     old_x = e.pageX, old_y = e.pageY;
 
     e.preventDefault();
 }
+
 
 function onDocumentKeyDown(event) {
     // Get the key code of the pressed key 
@@ -130,51 +125,6 @@ function onDocumentKeyDown(event) {
     if (keyCode == 189 && radius <= 17) {
         radius += 0.1;
     }
-    if (keyCode === 37 && thimble.scene.position.x > -9) {
-        if (!isMoving) {
-            // Set the target position to move the thimble to the left by 1 unit
-            targetX -= 1.92;
-            // Start the movement
-            isMoving = true;
-            // Simulate a jump by moving the thimble upwards in the Z direction
-            jumpStartTime = Date.now();
-        }
-    }
-    
-    if (keyCode === 39 && thimble.scene.position.x < 11.5) {
-        if (!isMoving) {
-            // Set the target position to move the thimble to the right by 1 unit
-            targetX += 1.92;
-            // Start the movement
-            isMoving = true;
-            // Simulate a jump by moving the thimble upwards in the Z direction
-            jumpStartTime = Date.now();
-        }
-    }
-    
-    
-    if (keyCode === 38 &&  thimble.scene.position.y < 11.5) {
-        // Move thimble 1 unit to the left
-        if (!isMoving) {
-            // Set the target position to move the thimble to the right by 1 unit
-            targetY += 1.92;
-            // Start the movement
-            isMoving = true;
-            // Simulate a jump by moving the thimble upwards in the Z direction
-            jumpStartTime = Date.now();
-        }
-    }
-
-    if (keyCode === 40 &&  thimble.scene.position.y > -8.5) {
-        if (!isMoving) {
-            // Set the target position to move the thimble to the right by 1 unit
-            targetY -= 1.92;
-            // Start the movement
-            isMoving = true;
-            // Simulate a jump by moving the thimble upwards in the Z direction
-            jumpStartTime = Date.now();
-        }
-    }
 }
 
 renderer.domElement.addEventListener("mousedown", mouseDown);
@@ -184,6 +134,7 @@ renderer.setClearColor(0xabcdef);
 
 document.addEventListener("keydown", onDocumentKeyDown, false);
 
+// ----------------------------------------------- RESIZING WINDOW --------------------------------------------------
 window.addEventListener('resize', function () {
     renderer.setSize(window.innerWidth, window.innerHeight);
     const aspect = window.innerWidth / window.innerHeight;
@@ -191,59 +142,124 @@ window.addEventListener('resize', function () {
     camera.updateProjectionMatrix();
 });
 
-function calculateJumpHeight(elapsedTime, duration) {
-    const halfDuration = duration / 2;
-    const jumpHeight = 1; // Adjust the height of the jump as needed
-    let jumpOffset = jumpHeight * Math.sin((elapsedTime / halfDuration) * Math.PI);
-    
-    // Ensure the thimble doesn't go below the original Z position
-    jumpOffset = Math.max(originalZ, jumpOffset);
+// ----------------------------------------------- PHYSICS --------------------------------------------------
 
-    return jumpOffset;
+let physicsWorld;
+
+function initPhysics() {
+    physicsWorld = new CANNON.World({
+        allowSleep: true,
+        gravity: new CANNON.Vec3(0, -50, 0),
+    })
+    physicsWorld.defaultContactMaterial.restitution = .3;
 }
 
+// ----------------------------------------------- BUTTON RAYCAST --------------------------------------------------
 
-function animateThimbleMovement() {
-    // Check if the thimble is currently moving
-    if (isMoving) {
-        // Calculate the distance between current position and target position
-        const distanceX = targetX - thimble.scene.position.x;
-        const distanceY = targetY - thimble.scene.position.y;
-        // Define movement speed
-        const movementSpeed = 0.1; // Adjust as needed
+// Create a raycaster
+const raycaster = new THREE.Raycaster();
 
-        // Check if the distance is small enough to stop moving
-        if (Math.abs(distanceX) < 0.01 && Math.abs(distanceY) < 0.01) {
-            // Snap the thimble to the target position
-            thimble.scene.position.x = targetX;
-            thimble.scene.position.y = targetY;
-            // Stop moving
-            isMoving = false;
-        } else {
-            // Move the thimble towards the target position
-            thimble.scene.position.x += distanceX * movementSpeed;
-            thimble.scene.position.y += distanceY * movementSpeed;
-        }
+// Listen for mouse clicks on the renderer element
+renderer.domElement.addEventListener('click', onClick);
 
-        const elapsedTime = Date.now() - jumpStartTime;
-        if (elapsedTime <= jumpDuration) {
-            // Calculate the height of the jump
-            const jumpOffset = calculateJumpHeight(elapsedTime, jumpDuration);
-            // Update the thimble's Z position
-            thimble.scene.position.z = originalZ + jumpOffset;
-        } else {
-            // Snap the thimble to the target position when the jump is complete
-            thimble.scene.position.x = targetX;
-            thimble.scene.position.y = targetY;
-            // Stop moving
-            isMoving = false;
-        }
+// Define the onClick function
+function onClick(event) {
+    // Calculate mouse position in normalized device coordinates (NDC)
+    const mouse = new THREE.Vector2(
+        (event.clientX / renderer.domElement.clientWidth) * 2 - 1,
+        -(event.clientY / renderer.domElement.clientHeight) * 2 + 1
+    );
+
+    // Update the raycaster's origin and direction based on the mouse position
+    raycaster.setFromCamera(mouse, camera);
+
+    // Find intersected objects
+    const intersects = raycaster.intersectObjects(scene.children, true);
+
+    // If there are intersections, handle the first one
+    if (intersects.length > 0) {
+        const clickedObject = intersects[0].object;
+        // Handle the click on the object
+        handleClickOnObject(clickedObject);
     }
 }
 
+function handleClickOnObject(object) {
+    if (object.name === 'vermelho') {
+        
+        const initialPosition = object.position.clone();
+        const targetPosition = new THREE.Vector3().copy(initialPosition).add(new THREE.Vector3(0, -0.2, 0));
+
+        // Define animation parameters
+        const duration = 1000; // Animation duration in milliseconds
+        const startTime = Date.now();
+        
+        // Define an animation loop
+        function animate() {
+            const currentTime = Date.now();
+            const elapsedTime = currentTime - startTime;
+            const t = THREE.MathUtils.clamp(elapsedTime / duration, 0, 1); // Ensure t is between 0 and 1
+            
+            // Interpolate position based on t
+            const newPosition = initialPosition.clone().lerp(targetPosition, t);
+            object.position.copy(newPosition);
+            
+            // Update renderer on each frame
+            renderer.render(scene, camera);
+            
+            // Check if animation is complete
+            if (t < 1) {
+                requestAnimationFrame(animate); // Continue animation
+            } else {
+                // Animation complete, animate back up
+                animateBackUp();
+            }
+        }
+        
+        // Start the animation
+        animate();
+        
+        // Define animation for moving back up
+        function animateBackUp() {
+            const startBackUpTime = Date.now();
+            const initialPositionBackUp = object.position.clone();
+            
+            // Define an animation loop for moving back up
+            function animateUp() {
+                const currentTimeBackUp = Date.now();
+                const elapsedTimeBackUp = currentTimeBackUp - startBackUpTime;
+                const tBackUp = THREE.MathUtils.clamp(elapsedTimeBackUp / duration, 0, 1); // Ensure tBackUp is between 0 and 1
+                
+                // Interpolate position based on tBackUp
+                const newPositionBackUp = initialPositionBackUp.clone().lerp(initialPosition, tBackUp);
+                object.position.copy(newPositionBackUp);
+                
+                // Check if animation is complete
+                if (tBackUp < 1) {
+                    requestAnimationFrame(animateUp); // Continue animation
+                }
+            }
+            
+            // Start the back up animation
+            animateUp();
+        }
+        
+        currentScore = DICE.throwDice(diceObject);
+    }
+}
+
+function verifyDiceFlag(){
+    const { diceFlag, currentScore } = DICE.getDiceFlag()
+    if (diceFlag){
+        DICE.setDiceFlag();
+        THIMBLE.moveThimble(currentScore);
+    }
+}
+
+// ----------------------------------------------- PROJECT RENDERING --------------------------------------------------
 function animate() {
     requestAnimationFrame(animate);
-    animateThimbleMovement();
+    THIMBLE.animateThimbleMovement(thimbleObj);
 
     // Clamp phi to avoid flipping
     phi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, phi));
@@ -256,7 +272,14 @@ function animate() {
     // Update camera orientation
     camera.lookAt(0, 0, 0);
 
+    physicsWorld.fixedStep();
+
+    diceObject.diceMesh.position.copy(diceObject.body.position);
+    diceObject.diceMesh.quaternion.copy(diceObject.body.quaternion);
+    verifyDiceFlag();
     renderer.render(scene, camera);
 }
 
+initPhysics();
+initScene();
 animate();
