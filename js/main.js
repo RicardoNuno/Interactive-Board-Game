@@ -59,7 +59,6 @@ function addObjects(){
         thimbleObj = thimble;
         scene.add(thimble);
     });
-    diceInit();
 }
 
 function floorPhysics(floor){
@@ -73,7 +72,7 @@ function floorPhysics(floor){
 }
 
 function diceInit(){
-    diceMesh = DICE.createDiceMesh(5);
+    diceMesh = DICE.createDiceMesh();
     diceDic = DICE.createDice(5, diceMesh);
     physicsWorld.addBody(diceDic.body);
     diceObject = diceDic;
@@ -186,7 +185,9 @@ function onClick(event) {
 
 function handleClickOnObject(object) {
     if (object.name === 'vermelho') {
-        
+        if (!diceObject){
+            diceInit();
+        }
         const initialPosition = object.position.clone();
         const targetPosition = new THREE.Vector3().copy(initialPosition).add(new THREE.Vector3(0, -0.2, 0));
 
@@ -242,8 +243,7 @@ function handleClickOnObject(object) {
             
             // Start the back up animation
             animateUp();
-        }
-        
+        }  
         currentScore = DICE.throwDice(diceObject);
     }
 }
@@ -274,9 +274,12 @@ function animate() {
 
     physicsWorld.fixedStep();
 
-    diceObject.diceMesh.position.copy(diceObject.body.position);
-    diceObject.diceMesh.quaternion.copy(diceObject.body.quaternion);
-    verifyDiceFlag();
+    if (diceObject){
+        diceObject.diceMesh.position.copy(diceObject.body.position);
+        diceObject.diceMesh.quaternion.copy(diceObject.body.quaternion);
+        verifyDiceFlag();
+    }
+    
     renderer.render(scene, camera);
 }
 

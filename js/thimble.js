@@ -72,9 +72,7 @@ export function animateThimbleMovement(thimble) {
             // Stop moving
             isMoving = false;
             if (scoreCount != 0){
-                console.log("han?")
                 moveThimble(scoreCount)
-                console.log(scoreCount);
             }
         } else {
             // Move the thimble towards the target position
@@ -95,9 +93,7 @@ export function animateThimbleMovement(thimble) {
             // Stop moving
             isMoving = false;
             if (scoreCount != 0){
-                console.log("han?")
                 moveThimble(scoreCount);
-                console.log(scoreCount);
             }
         }
     }

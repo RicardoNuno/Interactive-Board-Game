@@ -43,6 +43,8 @@ export function createDice(initialPositionY, diceMesh) {
         sleepTimeLimit: .1
     });
 
+    body.allowSleep = false;
+
     return {diceMesh, body};
 }
 
