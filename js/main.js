@@ -29,6 +29,7 @@ let forbiddenIdx = [0,2,4,7,9,
                     12,14,18,
                     20,22,25,27,
                     30,32,34];
+let throwFlag = true;
 
 function initScene() {
     renderer.shadowMap.enabled = true;
@@ -45,8 +46,26 @@ function initScene() {
     directionalLight.position.set(15, 30, 15);
     scene.add(directionalLight);
     scene.add(topLight);
+
     addObjects();
     animate();
+
+    const audio = new Audio('Funny Quirky Comedy.mp3');
+    let audioInitialized = false;
+
+    // Function to initialize audio playback
+    function initAudio() {
+        audio.loop = true;
+        audio.play();
+    }
+
+    // Listen for a user interaction event
+    document.addEventListener('mousedown', function() {
+        if (!audioInitialized) {
+            initAudio();
+            audioInitialized = true;
+        }
+    });
 }
 
 function addObjects(){
@@ -194,70 +213,74 @@ function onClick(event) {
 
 function handleClickOnObject(object) {
     if (object.name === 'vermelho' && buttonFlag) {
-        buttonFlag = false;
-        if (!diceObject){
-            diceInit();
-        }
-        const initialPosition = object.position.clone();
-        const targetPosition = new THREE.Vector3().copy(initialPosition).add(new THREE.Vector3(0, -0.2, 0));
 
-        // Define animation parameters
-        const duration = 1000; // Animation duration in milliseconds
-        const startTime = Date.now();
-        
-        // Define an animation loop
-        function animate() {
-            const currentTime = Date.now();
-            const elapsedTime = currentTime - startTime;
-            const t = THREE.MathUtils.clamp(elapsedTime / duration, 0, 1); // Ensure t is between 0 and 1
-            
-            // Interpolate position based on t
-            const newPosition = initialPosition.clone().lerp(targetPosition, t);
-            object.position.copy(newPosition);
-            
-            // Update renderer on each frame
-            renderer.render(scene, camera);
-            
-            // Check if animation is complete
-            if (t < 1) {
-                requestAnimationFrame(animate); // Continue animation
-            } else {
-                // Animation complete, animate back up
-                animateBackUp();
+        if (throwFlag || !diceObject) {
+            throwFlag = false;
+            buttonFlag = false;
+            if (!diceObject){
+                diceInit();
             }
-        }
-        
-        // Start the animation
-        animate();
-        
-        // Define animation for moving back up
-        function animateBackUp() {
-            const startBackUpTime = Date.now();
-            const initialPositionBackUp = object.position.clone();
+            const initialPosition = object.position.clone();
+            const targetPosition = new THREE.Vector3().copy(initialPosition).add(new THREE.Vector3(0, -0.2, 0));
+
+            // Define animation parameters
+            const duration = 1000; // Animation duration in milliseconds
+            const startTime = Date.now();
             
-            // Define an animation loop for moving back up
-            function animateUp() {
-                const currentTimeBackUp = Date.now();
-                const elapsedTimeBackUp = currentTimeBackUp - startBackUpTime;
-                const tBackUp = THREE.MathUtils.clamp(elapsedTimeBackUp / duration, 0, 1); // Ensure tBackUp is between 0 and 1
+            // Define an animation loop
+            function animate() {
+                const currentTime = Date.now();
+                const elapsedTime = currentTime - startTime;
+                const t = THREE.MathUtils.clamp(elapsedTime / duration, 0, 1); // Ensure t is between 0 and 1
                 
-                // Interpolate position based on tBackUp
-                const newPositionBackUp = initialPositionBackUp.clone().lerp(initialPosition, tBackUp);
-                object.position.copy(newPositionBackUp);
+                // Interpolate position based on t
+                const newPosition = initialPosition.clone().lerp(targetPosition, t);
+                object.position.copy(newPosition);
+                
+                // Update renderer on each frame
+                renderer.render(scene, camera);
                 
                 // Check if animation is complete
-                if (tBackUp < 1) {
-                    requestAnimationFrame(animateUp); // Continue animation
-                }
-                else{
-                    buttonFlag = true;
+                if (t < 1) {
+                    requestAnimationFrame(animate); // Continue animation
+                } else {
+                    // Animation complete, animate back up
+                    animateBackUp();
                 }
             }
             
-            // Start the back up animation
-            animateUp();
-        }  
-        currentScore = DICE.throwDice(diceObject);
+            // Start the animation
+            animate();
+            
+            // Define animation for moving back up
+            function animateBackUp() {
+                const startBackUpTime = Date.now();
+                const initialPositionBackUp = object.position.clone();
+                
+                // Define an animation loop for moving back up
+                function animateUp() {
+                    const currentTimeBackUp = Date.now();
+                    const elapsedTimeBackUp = currentTimeBackUp - startBackUpTime;
+                    const tBackUp = THREE.MathUtils.clamp(elapsedTimeBackUp / duration, 0, 1); // Ensure tBackUp is between 0 and 1
+                    
+                    // Interpolate position based on tBackUp
+                    const newPositionBackUp = initialPositionBackUp.clone().lerp(initialPosition, tBackUp);
+                    object.position.copy(newPositionBackUp);
+                    
+                    // Check if animation is complete
+                    if (tBackUp < 1) {
+                        requestAnimationFrame(animateUp); // Continue animation
+                    }
+                    else{
+                        buttonFlag = true;
+                    }
+                }
+                
+                // Start the back up animation
+                animateUp();
+            }  
+            currentScore = DICE.throwDice(diceObject);
+        }
     }
 }
 
@@ -281,6 +304,7 @@ function checkPlaceHouse(){
             },currentIndex);
         }
         THIMBLE.setScoreFlag();   
+        throwFlag = true;
     }
 }
 

@@ -200,14 +200,14 @@ function handleSleepEvent(event) {
         } else if (isPiOrMinusPi(euler.x)) {
             diceResult(6);
         } else {
-            dice.body.allowSleep = true; // Landed on edge; wait to fall on side and fire the event again
+            diceFlag = true; // Landed on edge; wait to fall on side and fire the event again
         }
     } else if (isHalfPi(euler.z)) {
         diceResult(2);
     } else if (isMinusHalfPi(euler.z)) {
         diceResult(5);
     } else {
-        dice.body.allowSleep = true; // Landed on edge; wait to fall on side and fire the event again
+        diceFlag = true; // Landed on edge; wait to fall on side and fire the event again
     }
 }
 
