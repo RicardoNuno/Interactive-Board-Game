@@ -4,6 +4,7 @@ import {createBoard, createFloor} from './board.js';
 import * as DICE from './dice.js';
 import {createButton1, createButton2} from './redButton.js';
 import * as THIMBLE from './thimble.js';
+import * as HOUSE from './house.js';
 
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -21,19 +22,26 @@ let redButton;
 let thimbleObj;
 let diceObject;
 let currentScore;
+let houseObject;
+let buttonFlag = true;
+let currentIndex;
+let forbiddenIdx = [0,2,4,7,9,
+                    12,14,18,
+                    20,22,25,27,
+                    30,32,34];
 
 function initScene() {
     renderer.shadowMap.enabled = true;
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambientLight);
-    const topLight = new THREE.PointLight(0xffffff, .5);
-    topLight.position.set(10, 15, 0);
+    const topLight = new THREE.PointLight(0xffffff, .8);
+    topLight.position.set(5, 13, 0);
     topLight.castShadow = true;
     topLight.shadow.mapSize.width = 2048;
     topLight.shadow.mapSize.height = 2048;
     topLight.shadow.camera.near = 2;
     topLight.shadow.camera.far = 400;
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 2); // Example directional light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.7); // Example directional light
     directionalLight.position.set(15, 30, 15);
     scene.add(directionalLight);
     scene.add(topLight);
@@ -55,9 +63,10 @@ function addObjects(){
     redButton = scene.add(button2.sphere);
     physicsWorld.addBody(button2.body);
     
-    THIMBLE.createThimble(function (thimble) {
+    THIMBLE.createThimble(function (thimble, thimbleBody) {
         thimbleObj = thimble;
         scene.add(thimble);
+        physicsWorld.addBody(thimbleBody);
     });
 }
 
@@ -184,7 +193,8 @@ function onClick(event) {
 }
 
 function handleClickOnObject(object) {
-    if (object.name === 'vermelho') {
+    if (object.name === 'vermelho' && buttonFlag) {
+        buttonFlag = false;
         if (!diceObject){
             diceInit();
         }
@@ -239,6 +249,9 @@ function handleClickOnObject(object) {
                 if (tBackUp < 1) {
                     requestAnimationFrame(animateUp); // Continue animation
                 }
+                else{
+                    buttonFlag = true;
+                }
             }
             
             // Start the back up animation
@@ -249,10 +262,25 @@ function handleClickOnObject(object) {
 }
 
 function verifyDiceFlag(){
-    const { diceFlag, currentScore } = DICE.getDiceFlag()
+    const { diceFlag, currentScore } = DICE.getDiceFlag();
     if (diceFlag){
         DICE.setDiceFlag();
         THIMBLE.moveThimble(currentScore);
+    }
+}
+
+function checkPlaceHouse(){
+    currentIndex = THIMBLE.getIndex();
+    if (THIMBLE.getScoreFlag()){
+        if (!forbiddenIdx.includes(currentIndex)){
+                HOUSE.createHouse(function (houseMesh, body) {
+                houseObject = {houseMesh,body};
+                scene.add(houseObject.houseMesh);
+                physicsWorld.addBody(houseObject.body);
+                forbiddenIdx.push(currentIndex);
+            },currentIndex);
+        }
+        THIMBLE.setScoreFlag();   
     }
 }
 
@@ -278,6 +306,13 @@ function animate() {
         diceObject.diceMesh.position.copy(diceObject.body.position);
         diceObject.diceMesh.quaternion.copy(diceObject.body.quaternion);
         verifyDiceFlag();
+    }
+
+    checkPlaceHouse();
+    
+    if (houseObject){
+        houseObject.houseMesh.position.copy(houseObject.body.position);
+        houseObject.houseMesh.quaternion.copy(houseObject.body.quaternion);
     }
     
     renderer.render(scene, camera);

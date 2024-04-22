@@ -3,7 +3,7 @@ import * as THREE from 'three';
 export function createBoard(){
     var boardGeometry = new THREE.BoxGeometry(25, 25, 0.2); // Example dimensions
     var textureLoader = new THREE.TextureLoader();
-    var monopolyTexture = textureLoader.load('/monopoly.png');
+    var monopolyTexture = textureLoader.load('/ricardopolio.png');
     // Adjust the mipmap bias for texture filtering
     monopolyTexture.generateMipmaps = false; // Disable automatic mipmap generation
     monopolyTexture.magFilter = THREE.LinearFilter; // Use linear filtering for magnification

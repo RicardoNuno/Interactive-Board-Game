@@ -4,8 +4,8 @@ import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
 
 // ----------------------------------------------- DICES --------------------------------------------------
 const params = {
-    segments: 44,
-    edgeRadius: 0.1,
+    segments: 54,
+    edgeRadius: 0.08,
     notchRadius: 0.15,
     notchDepth: 0.1,
 };
@@ -43,7 +43,7 @@ export function createDice(initialPositionY, diceMesh) {
         sleepTimeLimit: .1
     });
 
-    body.allowSleep = false;
+    body.position.set(0, 1, 0);
 
     return {diceMesh, body};
 }
@@ -255,6 +255,6 @@ export function getDiceFlag(){
     return {diceFlag, currentScore};
 }
 
-export function setDiceFlag(dice){
-    diceFlag = false;   
+export function setDiceFlag(){
+    diceFlag = false;
 }
