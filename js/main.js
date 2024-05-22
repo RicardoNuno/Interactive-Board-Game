@@ -5,6 +5,7 @@ import * as DICE from './dice.js';
 import {createButton1, createButton2} from './redButton.js';
 import * as THIMBLE from './thimble.js';
 import * as HOUSE from './house.js';
+import * as CLOUD from './cloud.js';
 
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
@@ -87,6 +88,15 @@ function addObjects(){
         scene.add(thimble);
         physicsWorld.addBody(thimbleBody);
     });
+
+    CLOUD.createCloud((cloudMesh, body) => {
+        scene.add(cloudMesh);
+        physicsWorld.addBody(body);
+        body.addEventListener('postStep', () => {
+            cloudMesh.position.copy(body.position);
+            cloudMesh.quaternion.copy(body.quaternion);
+        });
+    }, currentIndex);
 }
 
 function floorPhysics(floor){
