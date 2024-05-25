@@ -1,21 +1,20 @@
 import * as THREE from 'three';
 import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
-import {createBoard, createFloor} from './board.js';
+import { createBoard, createFloor } from './board.js';
 import * as DICE from './dice.js';
-import {createButton1, createButton2} from './redButton.js';
+import { createButton1, createButton2 } from './redButton.js';
 import * as THIMBLE from './thimble.js';
 import * as HOUSE from './house.js';
 import * as CLOUD from './cloud.js';
 
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.1, 1000 );
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
 let renderer = new THREE.WebGLRenderer();
-renderer.setSize( window.innerWidth, window.innerHeight );
-document.body.appendChild( renderer.domElement );
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 renderer.setPixelRatio(3);
 
-// ----------------------------------------------- INIT SCENE --------------------------------------------------
 let diceMesh;
 let diceDic = {};
 let floor;
@@ -23,13 +22,15 @@ let redButton;
 let thimbleObj;
 let diceObject;
 let currentScore;
+let cloudObject;
+let cloudPosition;
 let houseObject;
 let buttonFlag = true;
 let currentIndex;
-let forbiddenIdx = [0,2,4,7,9,
-                    12,14,18,
-                    20,22,25,27,
-                    30,32,34];
+let forbiddenIdx = [0, 2, 4, 7, 9,
+    12, 14, 18,
+    20, 22, 25, 27,
+    30, 32, 34];
 let throwFlag = true;
 
 function initScene() {
@@ -43,7 +44,7 @@ function initScene() {
     topLight.shadow.mapSize.height = 2048;
     topLight.shadow.camera.near = 2;
     topLight.shadow.camera.far = 400;
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.7); // Example directional light
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.7);
     directionalLight.position.set(15, 30, 15);
     scene.add(directionalLight);
     scene.add(topLight);
@@ -61,7 +62,7 @@ function initScene() {
     }
 
     // Listen for a user interaction event
-    document.addEventListener('mousedown', function() {
+    document.addEventListener('mousedown', function () {
         if (!audioInitialized) {
             initAudio();
             audioInitialized = true;
@@ -69,7 +70,7 @@ function initScene() {
     });
 }
 
-function addObjects(){
+function addObjects() {
     scene.add(createBoard());
     floor = createFloor();
     scene.add(floor);
@@ -82,24 +83,23 @@ function addObjects(){
     const button2 = createButton2();
     redButton = scene.add(button2.sphere);
     physicsWorld.addBody(button2.body);
-    
+
     THIMBLE.createThimble(function (thimble, thimbleBody) {
         thimbleObj = thimble;
         scene.add(thimble);
         physicsWorld.addBody(thimbleBody);
     });
 
-    CLOUD.createCloud((cloudMesh, body) => {
-        scene.add(cloudMesh);
-        physicsWorld.addBody(body);
-        body.addEventListener('postStep', () => {
-            cloudMesh.position.copy(body.position);
-            cloudMesh.quaternion.copy(body.quaternion);
-        });
+    CLOUD.createCloud((mesh, body) => {
+        cloudObject = { mesh, body };
+        scene.add(cloudObject.mesh);
+        // Extract the cloud's position
+        cloudPosition = cloudObject.mesh.position.clone();
+        
     }, currentIndex);
 }
 
-function floorPhysics(floor){
+function floorPhysics(floor) {
     const floorBody = new CANNON.Body({
         type: CANNON.Body.STATIC,
         shape: new CANNON.Plane(),
@@ -109,7 +109,7 @@ function floorPhysics(floor){
     physicsWorld.addBody(floorBody);
 }
 
-function diceInit(){
+function diceInit() {
     diceMesh = DICE.createDiceMesh();
     diceDic = DICE.createDice(5, diceMesh);
     physicsWorld.addBody(diceDic.body);
@@ -146,7 +146,6 @@ const mouseMove = function (e) {
 
     e.preventDefault();
 }
-
 
 function onDocumentKeyDown(event) {
     // Get the key code of the pressed key 
@@ -227,7 +226,7 @@ function handleClickOnObject(object) {
         if (throwFlag || !diceObject) {
             throwFlag = false;
             buttonFlag = false;
-            if (!diceObject){
+            if (!diceObject) {
                 diceInit();
             }
             const initialPosition = object.position.clone();
@@ -236,20 +235,20 @@ function handleClickOnObject(object) {
             // Define animation parameters
             const duration = 1000; // Animation duration in milliseconds
             const startTime = Date.now();
-            
+
             // Define an animation loop
             function animate() {
                 const currentTime = Date.now();
                 const elapsedTime = currentTime - startTime;
                 const t = THREE.MathUtils.clamp(elapsedTime / duration, 0, 1); // Ensure t is between 0 and 1
-                
+
                 // Interpolate position based on t
                 const newPosition = initialPosition.clone().lerp(targetPosition, t);
                 object.position.copy(newPosition);
-                
+
                 // Update renderer on each frame
                 renderer.render(scene, camera);
-                
+
                 // Check if animation is complete
                 if (t < 1) {
                     requestAnimationFrame(animate); // Continue animation
@@ -258,62 +257,62 @@ function handleClickOnObject(object) {
                     animateBackUp();
                 }
             }
-            
+
             // Start the animation
             animate();
-            
+
             // Define animation for moving back up
             function animateBackUp() {
                 const startBackUpTime = Date.now();
                 const initialPositionBackUp = object.position.clone();
-                
+
                 // Define an animation loop for moving back up
                 function animateUp() {
                     const currentTimeBackUp = Date.now();
                     const elapsedTimeBackUp = currentTimeBackUp - startBackUpTime;
                     const tBackUp = THREE.MathUtils.clamp(elapsedTimeBackUp / duration, 0, 1); // Ensure tBackUp is between 0 and 1
-                    
+
                     // Interpolate position based on tBackUp
                     const newPositionBackUp = initialPositionBackUp.clone().lerp(initialPosition, tBackUp);
                     object.position.copy(newPositionBackUp);
-                    
+
                     // Check if animation is complete
                     if (tBackUp < 1) {
                         requestAnimationFrame(animateUp); // Continue animation
-                    }
-                    else{
+                    } else {
                         buttonFlag = true;
                     }
                 }
-                
+
                 // Start the back up animation
                 animateUp();
-            }  
+            }
             currentScore = DICE.throwDice(diceObject);
         }
     }
 }
 
-function verifyDiceFlag(){
+function verifyDiceFlag() {
     const { diceFlag, currentScore } = DICE.getDiceFlag();
-    if (diceFlag){
+    if (diceFlag) {
         DICE.setDiceFlag();
         THIMBLE.moveThimble(currentScore);
+        CLOUD.moveCloud(currentIndex);
     }
 }
 
-function checkPlaceHouse(){
+function checkPlaceHouse() {
     currentIndex = THIMBLE.getIndex();
-    if (THIMBLE.getScoreFlag()){
-        if (!forbiddenIdx.includes(currentIndex)){
-                HOUSE.createHouse(function (houseMesh, body) {
-                houseObject = {houseMesh,body};
+    if (THIMBLE.getScoreFlag()) {
+        if (!forbiddenIdx.includes(currentIndex)) {
+            HOUSE.createHouse(function (houseMesh, body) {
+                houseObject = { houseMesh, body };
                 scene.add(houseObject.houseMesh);
                 physicsWorld.addBody(houseObject.body);
                 forbiddenIdx.push(currentIndex);
-            },currentIndex);
+            }, currentIndex);
         }
-        THIMBLE.setScoreFlag();   
+        THIMBLE.setScoreFlag();
         throwFlag = true;
     }
 }
@@ -321,7 +320,13 @@ function checkPlaceHouse(){
 // ----------------------------------------------- PROJECT RENDERING --------------------------------------------------
 function animate() {
     requestAnimationFrame(animate);
+
     THIMBLE.animateThimbleMovement(thimbleObj);
+    
+    // Update cloud animation if cloudObject is defined
+    if (cloudObject) {
+        CLOUD.updateCloudPosition(cloudObject.mesh, cloudObject.body);
+    }
 
     // Clamp phi to avoid flipping
     phi = Math.max(-Math.PI / 2 + 0.01, Math.min(Math.PI / 2 - 0.01, phi));
@@ -330,27 +335,29 @@ function animate() {
     camera.position.x = radius * Math.sin(theta) * Math.cos(phi) * 1.5;
     camera.position.y = radius * Math.sin(phi) * 1.5;
     camera.position.z = radius * Math.cos(theta) * Math.cos(phi);
-    
+
     // Update camera orientation
     camera.lookAt(0, 0, 0);
 
     physicsWorld.fixedStep();
 
-    if (diceObject){
+    if (diceObject) {
         diceObject.diceMesh.position.copy(diceObject.body.position);
         diceObject.diceMesh.quaternion.copy(diceObject.body.quaternion);
         verifyDiceFlag();
     }
 
     checkPlaceHouse();
-    
-    if (houseObject){
+
+    if (houseObject) {
         houseObject.houseMesh.position.copy(houseObject.body.position);
         houseObject.houseMesh.quaternion.copy(houseObject.body.quaternion);
     }
     
+    // Update the physics world
     renderer.render(scene, camera);
 }
+
 
 initPhysics();
 initScene();
