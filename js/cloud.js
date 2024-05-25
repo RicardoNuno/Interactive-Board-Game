@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
-import * as THIMBLE from './thimble.js';
 
 const posMove = 2;
 const height = 0.1;
@@ -26,8 +25,30 @@ const clock = new THREE.Clock();
 let positionQueue = [];
 let targetQuaternion = new THREE.Quaternion();
 let startQuaternion = new THREE.Quaternion();
+let opacityStartTime = 0;
+let opacityDuration = 2000; // Duration for the opacity animation
+let isDisappearing = false;
+let disappearStartTime = 0;
+let disappearDuration = 2000; // Duration for the disappearance animation
+let cloudFlag = false;
+
+export function resetCloudVariables() {
+    cloud = null;
+    cloudBody = null;
+    mixer = null;
+    isMoving = false;
+    moveStartTime = 0;
+    positionQueue = [];
+    targetQuaternion = new THREE.Quaternion();
+    startQuaternion = new THREE.Quaternion();
+    opacityStartTime = 0;
+    isDisappearing = false;
+    disappearStartTime = 0;
+    cloudFlag = false;
+}
 
 export function createCloud(callback, currentIndex = 0) {
+    resetCloudVariables();
     const loader = new GLTFLoader();
 
     loader.load('cloud.glb', function (gltf) {
@@ -41,14 +62,30 @@ export function createCloud(callback, currentIndex = 0) {
             mixer.clipAction(clip).play();
         });
 
-        // Scale and initial position adjustments
+        // Set initial position
         cloud.position.set(posMatrix[currentIndex][0], posMatrix[currentIndex][1], posMatrix[currentIndex][2]);
+
+        // Set initial opacity
+        cloud.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                child.material.transparent = true;
+                child.material.opacity = 0;
+            }
+        });
 
         cloudBody = new CANNON.Body({
             mass: 1,
             shape: new CANNON.Box(new CANNON.Vec3(0.25, 0.25, 0.25))
         });
         cloudBody.position.set(posMatrix[currentIndex][0], posMatrix[currentIndex][1], posMatrix[currentIndex][2]);
+
+        // Set initial quaternion
+        setTargetQuaternion(currentIndex);
+        cloud.quaternion.copy(targetQuaternion);
+        cloudBody.quaternion.copy(targetQuaternion);
+
+        // Start opacity animation
+        opacityStartTime = Date.now();
 
         callback(cloud, cloudBody);
     });
@@ -135,4 +172,36 @@ export function updateCloudPosition(cloud, body) {
 
     cloud.position.copy(body.position);
     cloud.quaternion.copy(body.quaternion);
+
+    // Opacity animation
+    const opacityElapsedTime = Date.now() - opacityStartTime;
+    const opacityT = Math.min(opacityElapsedTime / opacityDuration, 1);
+    cloud.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+            child.material.opacity = opacityT;
+        }
+    });
+
+    // Disappearance animation
+    if (isDisappearing) {
+        const disappearElapsedTime = Date.now() - disappearStartTime;
+        const disappearT = Math.min(disappearElapsedTime / disappearDuration, 1);
+        cloud.traverse((child) => {
+            if (child instanceof THREE.Mesh) {
+                child.material.opacity = 1 - disappearT;
+            }
+        });
+        if (disappearT >= 1) {
+            cloudFlag = true;
+        }
+    }
+}
+
+export function removeCloud() {
+    isDisappearing = true;
+    disappearStartTime = Date.now();
+}
+
+export function getCloudFlag() {
+    return cloudFlag;
 }

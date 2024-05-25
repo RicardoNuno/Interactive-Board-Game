@@ -90,14 +90,6 @@ function addObjects() {
         scene.add(thimble);
         physicsWorld.addBody(thimbleBody);
     });
-
-    CLOUD.createCloud((mesh, body) => {
-        cloudObject = { mesh, body };
-        scene.add(cloudObject.mesh);
-        // Extract the cloud's position
-        cloudPosition = cloudObject.mesh.position.clone();
-        
-    }, currentIndex);
 }
 
 function floorPhysics(floor) {
@@ -313,6 +305,7 @@ function checkPlaceHouse() {
             }, currentIndex);
         }
         else if (weatherIdx.includes(currentIndex)){
+            console.log(cloudObject)
             if (!cloudObject){
                 CLOUD.createCloud((mesh, body) => {
                     cloudObject = { mesh, body };
@@ -321,6 +314,16 @@ function checkPlaceHouse() {
                     cloudPosition = cloudObject.mesh.position.clone();
                     
                 }, currentIndex);
+            }
+        }
+        else if (currentIndex == 9){
+            if(cloudObject){
+                CLOUD.removeCloud(cloudObject);
+                if (CLOUD.getCloudFlag()){
+                    CLOUD.resetCloudVariables();
+                    scene.remove(cloudObject.mesh)
+                    cloudObject = false;
+                }
             }
         }
         THIMBLE.setScoreFlag();
@@ -336,7 +339,6 @@ function animate() {
     
     // Update cloud animation if cloudObject is defined
     if (cloudObject) {
-        currentIndex = THIMBLE.getIndex();
         CLOUD.updateCloudPosition(cloudObject.mesh, cloudObject.body);
     }
 
