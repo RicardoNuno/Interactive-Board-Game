@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import * as CANNON from 'https://cdn.skypack.dev/cannon-es';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
+import * as CLOUD from './cloud.js'
 
 // ----------------------------------------------- THIMBLE --------------------------------------------------
 let thimble;
@@ -118,7 +119,7 @@ export function animateThimbleMovement(thimble) {
     }
 }
 
-export function moveThimble(count){
+export function moveThimble(count, cloudObject){
     scoreCount = count - 1;
     if (!scoreCount){
         scoreFlag = true;
@@ -127,6 +128,9 @@ export function moveThimble(count){
         currentIndex = (currentIndex + 1) % 36;
         isMoving = true;
         jumpStartTime = Date.now();
+    }
+    if (cloudObject){
+        CLOUD.moveCloud(currentIndex, currentIndex + scoreCount, jumpDuration);
     }
 }
 

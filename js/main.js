@@ -32,6 +32,7 @@ let forbiddenIdx = [0, 2, 4, 7, 9,
     20, 22, 25, 27,
     30, 32, 34];
 let throwFlag = true;
+let weatherIdx = [4, 14, 22, 32];
 
 function initScene() {
     renderer.shadowMap.enabled = true;
@@ -296,8 +297,7 @@ function verifyDiceFlag() {
     const { diceFlag, currentScore } = DICE.getDiceFlag();
     if (diceFlag) {
         DICE.setDiceFlag();
-        THIMBLE.moveThimble(currentScore);
-        CLOUD.moveCloud(currentIndex);
+        THIMBLE.moveThimble(currentScore, cloudObject);
     }
 }
 
@@ -312,6 +312,17 @@ function checkPlaceHouse() {
                 forbiddenIdx.push(currentIndex);
             }, currentIndex);
         }
+        else if (weatherIdx.includes(currentIndex)){
+            if (!cloudObject){
+                CLOUD.createCloud((mesh, body) => {
+                    cloudObject = { mesh, body };
+                    scene.add(cloudObject.mesh);
+                    // Extract the cloud's position
+                    cloudPosition = cloudObject.mesh.position.clone();
+                    
+                }, currentIndex);
+            }
+        }
         THIMBLE.setScoreFlag();
         throwFlag = true;
     }
@@ -321,10 +332,11 @@ function checkPlaceHouse() {
 function animate() {
     requestAnimationFrame(animate);
 
-    THIMBLE.animateThimbleMovement(thimbleObj);
+    THIMBLE.animateThimbleMovement(thimbleObj, cloudObject);
     
     // Update cloud animation if cloudObject is defined
     if (cloudObject) {
+        currentIndex = THIMBLE.getIndex();
         CLOUD.updateCloudPosition(cloudObject.mesh, cloudObject.body);
     }
 
