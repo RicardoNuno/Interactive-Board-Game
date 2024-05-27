@@ -4,10 +4,15 @@ export function createBoard(){
     var boardGeometry = new THREE.BoxGeometry(25, 25, 0.2); // Example dimensions
     var textureLoader = new THREE.TextureLoader();
     var monopolyTexture = textureLoader.load('/ricardopolio.png');
+    var rulesTexture = textureLoader.load('/rules.png')
     // Adjust the mipmap bias for texture filtering
     monopolyTexture.generateMipmaps = false; // Disable automatic mipmap generation
     monopolyTexture.magFilter = THREE.LinearFilter; // Use linear filtering for magnification
     monopolyTexture.minFilter = THREE.LinearMipmapLinearFilter; // Use linear filtering for minification
+
+    rulesTexture.generateMipmaps = false; // Disable automatic mipmap generation
+    rulesTexture.magFilter = THREE.LinearFilter; // Use linear filtering for magnification
+    rulesTexture.minFilter = THREE.LinearMipmapLinearFilter; // Use linear filtering for minification
 
     const boardMaterials = [
         new THREE.MeshBasicMaterial({ color: 0x000000 }), // Right side (black)
@@ -15,7 +20,7 @@ export function createBoard(){
         new THREE.MeshBasicMaterial({ color: 0x000000 }), // Top side (black)
         new THREE.MeshBasicMaterial({ color: 0x000000 }), // Bottom side (black)
         new THREE.MeshBasicMaterial({ map: monopolyTexture }), // Front side (with texture)
-        new THREE.MeshBasicMaterial({ color: 0xFFFF0F }) // Back side (Yellow)
+        new THREE.MeshBasicMaterial({ map: rulesTexture }) // Back side (Yellow)
     ];
 
     // Create a material with different sides

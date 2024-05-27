@@ -6,6 +6,7 @@ import { createButton1, createButton2 } from './redButton.js';
 import * as THIMBLE from './thimble.js';
 import * as HOUSE from './house.js';
 import * as CLOUD from './cloud.js';
+import * as SOMBRERO from './sombrero.js';
 
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -23,6 +24,7 @@ let thimbleObj;
 let diceObject;
 let currentScore;
 let cloudObject;
+let sombreroObj;
 let cloudPosition;
 let houseObject;
 let buttonFlag = true;
@@ -305,7 +307,6 @@ function checkPlaceHouse() {
             }, currentIndex);
         }
         else if (weatherIdx.includes(currentIndex)){
-            console.log(cloudObject)
             if (!cloudObject){
                 CLOUD.createCloud((mesh, body) => {
                     cloudObject = { mesh, body };
@@ -326,6 +327,20 @@ function checkPlaceHouse() {
                 }
             }
         }
+        if (currentIndex == 27){
+            // Sombrero creation and attachment
+            if (!sombreroObj) {
+                SOMBRERO.createSombrero(function (sombrero, sombreroBody) {
+                    sombreroObj = sombrero;
+
+                    // Set the local position of the sombrero relative to the thimble
+                    sombrero.position.set(-25, 20, 26); // Adjust the y value to place the sombrero on top of the thimble
+
+                    thimbleObj.add(sombrero); // Attach the sombrero to the thimble in Three.js scene
+                    physicsWorld.addBody(sombreroBody);
+                });
+            }
+        }
         THIMBLE.setScoreFlag();
         throwFlag = true;
     }
@@ -340,6 +355,10 @@ function animate() {
     // Update cloud animation if cloudObject is defined
     if (cloudObject) {
         CLOUD.updateCloudPosition(cloudObject.mesh, cloudObject.body);
+    }
+
+    if (sombreroObj) {
+        SOMBRERO.updateSombreroAnimation(sombreroObj.mesh, sombreroObj.body);
     }
 
     // Clamp phi to avoid flipping
