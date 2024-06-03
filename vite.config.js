@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  base: '', // Use the name of your GitHub repository
+  base: '/Interactive-Board-Game/', // Replace with the name of your GitHub repository
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src/js'),
